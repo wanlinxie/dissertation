@@ -3,7 +3,7 @@
 
 from __future__ import division, with_statement
 import numpy as np
-from transduction.decoding.dp import mstwrapper
+##from transduction.decoding.dp import mstwrapper
 from transduction.model import metaidx
 
 
@@ -173,10 +173,10 @@ class BigramDP(object):
                 print "MSTWrapper weights can't be updated; rebuilding"
             # Note that we use (1-psi) for token scoring in the dependency
             # tree sub-problem
-            self.mst_wrapper = mstwrapper.MSTWrapper(self.instance,
-                    self.feats, weights, self.token_vars,
-                    get_idx=lambda x:x.idx,
-                    get_score=lambda x:(1-x.psi)*x.score)
+            ##self.mst_wrapper = mstwrapper.MSTWrapper(self.instance,
+            ##        self.feats, weights, self.token_vars,
+            ##        get_idx=lambda x:x.idx,
+            ##        get_score=lambda x:(1-x.psi)*x.score)
 
         # XXX
         if self.sanity_check:

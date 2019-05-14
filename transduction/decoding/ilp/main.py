@@ -43,7 +43,7 @@ class TransductionILP(object):
                 **self.var_flags)
 
         # Add other constraints (NOTE: may include additional variables)
-        for constraint_group in constraint_conf:
+        for constraint_group in constraint_conf: #fusion
             constraints.TransductionConstraints.add(
                     constraint_group,
                     self.lp,

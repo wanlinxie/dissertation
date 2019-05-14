@@ -15,7 +15,7 @@ class Semafor(object):
     """Interface to the Semafor frame-semantic parser.
     """
     def __init__(self,
-            path='/proj/fluke/users/kapil/tools/semafor/'
+            path='/path/to/project/tools/semafor/'
                  'semafor-semantic-parser'):
         """Initialize the path to the Semafor parser.
         """

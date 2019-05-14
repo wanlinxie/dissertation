@@ -5,10 +5,12 @@ from __future__ import division, with_statement
 import argparse
 import numpy as np
 import os
-from srilm_swig import srilm
+from swig_srilm import srilm
 from unidecode import unidecode
+import sys
+sys.path.insert(0, '/path/to/project')
 from utils import jsonrpc, timer
-
+import socket
 
 class LangModel(object):
     """A class that intializes and maintains SRILM language models for scoring
@@ -16,12 +18,13 @@ class LangModel(object):
     """
     logprob_funcs = [srilm.getUnigramProb,
                      srilm.getBigramProb,
-                     srilm.getTrigramProb,
-                     srilm.getQuadrigramProb,
-                     srilm.getPentagramProb]
+                     srilm.getTrigramProb]
+                     #srilm.getQuadrigramProb,
+                     #srilm.getPentagramProb]
 
     def __init__(self, n,
-            lm_path='/proj/fluke/resources/LMs/en.giga.noUN.5gram.lm.bin'):
+            lm_path='/path/to/project/resources/LMs/sample.lm'):
+        #'/proj/fluke/resources/LMs/en.giga.noUN.5gram.lm.bin'
         """Initialize language models.
         """
         # Record the maximum size of ngrams in the stored LM
@@ -82,19 +85,23 @@ class LangModel(object):
         return LangModel.logprob_funcs[n-1](self.lm,
                 ' '.join(unidecode(word) for word in ngram)) * np.log(10)
 
-    def score_ngrams(self, ngrams, normalize=False):
+    def score_ngrams(self, ngrams, normalize=True):
         """Return the sum or average log-probability of a list of n-grams
         under the n-gram LM.
         """
+        print("SCORENGRAM")
         logprob_sum = sum(self.score_ngram(ngram) for ngram in ngrams)
         if normalize:
+            print "normalizing"
             return logprob_sum / len(ngrams)
         else:
+            print "not normalizing"
             return logprob_sum
 
-    def score_sent(self, words, n=None, normalize=False):
+    def score_sent(self, words, n=None, normalize=True):
         """Return the sum or average log-probability of a sentence.
         """
+        print("SCORESENT")
         if n is None:
             n = self.n
 
@@ -113,16 +120,16 @@ if __name__ == '__main__':
             default=3)
     parser.add_argument('--lm_path', action='store',
             help="path to the trained SRILM language model",
-            default='/proj/fluke/resources/LMs/en.giga.noUN.5gram.lm.bin')
+            default='/path/to/project/resources/LMs/sample.lm')
     parser.add_argument('--host', action='store',
             help="host to serve on (default localhost; 0.0.0.0 for public)",
-            default=os.environ['HOSTNAME'])
+            default=socket.gethostname()) #os.environ['HOSTNAME']
     parser.add_argument('--port', action='store', type=int,
             help="port to serve on (default 8081)",
             default=8081)
     parser.add_argument('--timeout', action='store', type=int,
             help="time limit for responses",
-            default=60)
+            default=200)
     args = parser.parse_args()
 
     server = jsonrpc.Server(jsonrpc.JsonRpc20(),

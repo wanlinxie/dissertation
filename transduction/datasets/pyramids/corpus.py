@@ -296,10 +296,12 @@ class PyramidCorpus(object):
                            for year in range(2008,2012))
         corpus.set_slices(train=(0,train_test),
                           test=(train_test, num_instances))
-
-        print ' '.join(("Train:", str(len(corpus.train_instances)),
+        if num_instances == 0:
+            print("Zero corpus instances")
+        else:
+            print ' '.join(("Train:", str(len(corpus.train_instances)),
                 str(len(corpus.train_instances) / num_instances * 100) + '%'))
-        print ' '.join(("Test:", str(len(corpus.test_instances)),
+            print ' '.join(("Test:", str(len(corpus.test_instances)),
                 str(len(corpus.test_instances) / num_instances * 100) + '%'))
 
 

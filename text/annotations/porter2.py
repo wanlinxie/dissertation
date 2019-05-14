@@ -35,3 +35,4 @@ class Porter2(object):
             stems = [porter2.stem(self.normalize(token.lower()))
                     for token in sentence.tokens]
             sentence.add_token_tags(stems, name='stems', annotator='porter2')
+

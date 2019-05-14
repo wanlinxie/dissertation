@@ -13,6 +13,7 @@ import time
 import traceback
 import types
 from utils import jsonrpc, sparse, timer
+from transduction import model
 
 
 def _pickle_method(method):
@@ -100,7 +101,8 @@ def filter_args(args):
                   'display_weights',
                   'interruptable',
                   'slaves',
-                  'master_oversees']
+                  'master_oversees',
+                  'subcorpus']
     return dict((key, args_dict[key]) for key in valid_keys)
 
 

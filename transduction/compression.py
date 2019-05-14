@@ -8,7 +8,7 @@ from learning import onlinelearner, structperceptron
 import transduction
 
 
-data_path = '/home/kapil/research/projects/compression'
+data_path = '/Users/wanlinxie/Documents/nlp-energy-research/non_nn_fusion/dissertation_py2/data/compression'
 
 
 def add_corpus_args(parser):

@@ -14,8 +14,7 @@ import text.structure
 class Rasp(object):
     """Interface to the Rasp dependency parser.
     """
-    def __init__(self, path='/home/kapil/research/tools/rasp3os/scripts'):
-            #path='/proj/fluke/users/kapil/tools/rasp3os/scripts'):
+    def __init__(self, path='/path/to/project/tools/rasp3os/scripts'):
         """Initialize the path to the RASP parser.
         """
         self.path = path
@@ -68,7 +67,8 @@ class Rasp(object):
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
-                                        env=rasp_env)
+                                        env=rasp_env,
+                                        shell = True)
             sent_text = self.preprocess_text(sentence.tokens)
             stdout, stderr = process.communicate(input=sent_text)
             if show_output:

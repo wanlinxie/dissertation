@@ -11,7 +11,8 @@ def load_annotator(name):
     """
     # Load the module dynamically
     mod_name = name.lower()
-    module_spec = imp.find_module('text/annotations/' + mod_name)
+    module_spec = imp.find_module(mod_name,['/path/to/project/text/annotations/'])
+    #module_spec = imp.find_module('text/annotations/' + mod_name)
     if module_spec is None:
         print "ERROR: can't find annotator named", name
         raise ImportError

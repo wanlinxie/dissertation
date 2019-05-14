@@ -139,6 +139,7 @@ def init_servers(given_lm_servers, given_dep_servers):
     dep_servers.extend(given_dep_servers)
 
     lm_server = choice(lm_servers)
+    print(lm_servers)
     print "Using", lm_server, "as an LM server"
     globals()['lm_proxy'] = srilm.LangModel.from_server(lm_server)
 

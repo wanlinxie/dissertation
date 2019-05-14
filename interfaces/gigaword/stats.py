@@ -11,6 +11,7 @@ import os
 import re
 from stemming import porter2
 import sys
+sys.path.insert(0, '/Users/wanlinxie/Documents/nlp-energy-research/non_nn_fusion/dissertation_py2')
 from utils import jsonrpc, timer
 
 

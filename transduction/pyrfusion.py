@@ -2,29 +2,44 @@
 # Author: Kapil Thadani (kapil@cs.columbia.edu)
 
 from __future__ import division, with_statement
+import sys
+sys.path.insert(0, '/path/to/project')
 import argparse # TODO: remove backported module for 2.7+
 from datasets import pyramids
+from datasets import subconj
 from learning import onlinelearner, structperceptron
+import socket
 import transduction
+from transduction import instance
+from utils import evaluation
+import copy
+from transduction import model
+from interfaces import srilm
+from datasets.subconj import corpus
+import numpy as np
 
 
-data_path = '/home/kapil/research/projects/pyrfusion'
-
+data_path = '/path/to/data/pyrfusion'
+hostname = socket.gethostname();
+data_type = ""
+result_dir = "../results/expr_11/"
+exp_no = '11'
 
 def add_corpus_args(parser):
     """Add command-line parameters for specifying the parameters of the
     pyramid corpus.
     """
-    parser.add_argument('--pyramid_path', action='store',
-            help="path to pyramid dataset",
-            default='/proj/fluke/users/kapil/resources/DUC/')
+
+    ###
+    parser.add_argument('--subconj_path', action='store',
+            help="path to subconj dataset",
+            default='/path/to/project/transduction/datasets/subconj/subclause_py2_'+data_type+'.pkl')
+    #parser.add_argument('--pyramid_path', action='store',
+    #        help="path to pyramid dataset",
+    #        default='/proj/fluke/users/kapil/resources/DUC/')
     parser.add_argument('--corpus_path', action='store',
             help="path to store the annotated fusion corpus",
             default=data_path + '/corpora')
-#    parser.add_argument('--gigaword_path', action='store',
-#            help="path to pickled Gigaword corpus statistics",
-#            default='/proj/fluke/users/kapil/resources/gigaword_eng_4/' +
-#                    'gigaword.pickle')
     parser.add_argument('--use_labels', action='store_true',
             help="whether to use shorter labels as inputs instead of lines")
     parser.add_argument('--keep_exact_lines', action='store_true',
@@ -59,14 +74,14 @@ def add_corpus_args(parser):
             default=None)
     parser.add_argument('--annotations', action='store', nargs='+',
             help='required annotations for corpus text',
-            default=('Porter2', 'Tagchunk', 'Stanford', 'Rasp'))
+            default=('Porter2', 'Stanford', 'NLTKTagchunk')) #'Tagchunk', 'StanfordPOS', 'NLTKTagchunk'
 
 
 def get_corpus_name(args):
     """Devise a relatively unique but interpretable name for the corpus.
     """
     return '_'.join((
-            'pyr' + ('lbl' if args.use_labels else '') + \
+            data_type+'_pyr' + ('lbl' if args.use_labels else '') + \
             ('_xL' if args.skip_exact_labels
                 else '_x' if not args.keep_exact_lines
                 else ''),
@@ -83,30 +98,90 @@ def get_corpus_name(args):
 def get_corpus(args):
     """Load an annotated pyramid corpus or regenerate it if it doesn't exist.
     """
+
     trans_corpus = transduction.GoldTransductionCorpus(
             name=get_corpus_name(args),
             path=args.corpus_path)
 
     if not trans_corpus.loaded:
-        raw_corpus = pyramids.PyramidCorpus(args.pyramid_path)
+        print("corpus not found")
+
+        raw_corpus = subconj.FusionCorpus(args.subconj_path)
+        ###raw_corpus = pyramids.PyramidCorpus(args.pyramid_path)
         raw_corpus.export_instances(
-                trans_corpus,
-                corpus_split=args.corpus_split,
-                use_labels=args.use_labels,
-                skip_exact_lines=not args.keep_exact_lines,
-                skip_exact_labels=args.skip_exact_labels,
-                min_inputs=args.min_inputs,
-                max_inputs=args.max_inputs,
-                min_words=args.min_words,
-                max_words=args.max_words,
-                min_part_line_ratio=args.min_part_line_ratio,
-                min_scu_part_ratio=args.min_scu_part_ratio,
-                min_scu_line_overlap=args.min_scu_line_overlap)
-        print len(trans_corpus.instances), "instances created"
+                trans_corpus)
+                #corpus_split=args.corpus_split,
+                #use_labels=args.use_labels,
+                #skip_exact_lines=not args.keep_exact_lines,
+                #skip_exact_labels=args.skip_exact_labels,
+                #min_inputs=args.min_inputs,
+                #max_inputs=args.max_inputs,
+                #min_words=args.min_words,
+                #max_words=args.max_words,
+                #min_part_line_ratio=args.min_part_line_ratio,
+                #min_scu_part_ratio=args.min_scu_part_ratio,
+                #min_scu_line_overlap=args.min_scu_line_overlap)
+
+        print len(trans_corpus.instances), "trans corpus instances created"
         trans_corpus.save()
 
-    # Ensure the corpus has the required annotations
-    trans_corpus.annotate_with(args.annotations)
+    print "annotating transduction corpus..."
+    trans_corpus.annotate_with(args.annotations) 
+   
+    if args.split_corpus == "yes":
+        noun = ['that','what','whatever','who','whom','whoever','whomever']   
+        adj = ['that','who','whom','whose','which','where']
+        adv = ['when','whenever','since','until','before','after','while','as','because','so','although','even','whereas','though','if','unless']
+
+        # final corpus #
+        final_corpus = transduction.GoldTransductionCorpus(
+            name="final_"+get_corpus_name(args),
+            path=args.corpus_path)
+        if not final_corpus.loaded:
+            print "creating final corpus..."
+            corpus.create_empty_corpus(trans_corpus, final_corpus)
+            final_corpus.save()
+        print "annotating final corpus..."
+        final_corpus.annotate_with(args.annotations)
+
+        # noun corpus #
+        noun_corpus = transduction.GoldTransductionCorpus(
+            name="noun_"+get_corpus_name(args),
+            path=args.corpus_path)
+        if not noun_corpus.loaded:
+            print "creating noun corpus..."
+            corpus.create_split_corpus(trans_corpus, noun_corpus, noun)
+            print len(noun_corpus.instances), "noun corpus instances created"
+            noun_corpus.save()
+        print "annotating noun corpus..."
+        noun_corpus.annotate_with(args.annotations)
+
+        # adj corpus #
+        adj_corpus = transduction.GoldTransductionCorpus(
+            name="adj_"+get_corpus_name(args),
+            path=args.corpus_path)
+        if not adj_corpus.loaded:
+            print "creating adj corpus..."
+            corpus.create_split_corpus(trans_corpus, adj_corpus, adj)
+            print len(adj_corpus.instances), "adj corpus instances created"
+            adj_corpus.save()
+        print "annotating adj corpus..."
+        adj_corpus.annotate_with(args.annotations)
+
+        # adv corpus #
+        adv_corpus = transduction.GoldTransductionCorpus(
+            name="adv_"+get_corpus_name(args),
+            path=args.corpus_path)
+        if not adv_corpus.loaded:
+            print "creating adv corpus..."
+            corpus.create_split_corpus(trans_corpus, adv_corpus, adv)
+            print len(adv_corpus.instances), "adv corpus instances created"
+            adv_corpus.save()
+        print "annotating adv corpus..."
+        adv_corpus.annotate_with(args.annotations)
+
+        return final_corpus, noun_corpus, adj_corpus, adv_corpus
+
     return trans_corpus
 
 ###############################################################################
@@ -133,6 +208,10 @@ def add_partition_args(parser):
 def add_model_args(parser):
     """Add command-line parameters for specifying the fusion model to use.
     """
+
+    parser.add_argument('--split_corpus', action='store',
+            help="split into subcorpus?",
+            default="no")
     parser.add_argument('--model_name', action='store',
             help="name of model to evaluate with",
             default=None)
@@ -150,8 +229,9 @@ def add_model_args(parser):
             default=())
     parser.add_argument('--constraints', action='store', nargs='*',
             help="constraint configuration (fusion)",
-            default=())
-#            default=('fusion',))
+            #default=())
+            #default=('fusion',))
+            default=('fusion','subconj'))
     parser.add_argument('--standardize', action='store_true',
             help="whether to standardize feature values")
     parser.add_argument('--ngram_order', action='store', type=int,
@@ -159,9 +239,10 @@ def add_model_args(parser):
             default=2)
     parser.add_argument('--lm_servers', action='store', nargs='+',
             help="servers for an SRILM language model",
-            default=('island1:8081', 'island2:8081', 'island3:8081',
-                'island4:8081', 'island5:8081', #'coral9:8081', 'coral10:8081',
-                'coral11:8081', 'coral12:8081', 'coral13:8081'))
+            default=('SERVER1.local:8081','SERVER2:8081'))
+            #island1:8081', 'island2:8081', 'island3:8081',
+             #   'island4:8081', 'island5:8081', #'coral9:8081', 'coral10:8081',
+              #  'coral11:8081', 'coral12:8081', 'coral13:8081'
     parser.add_argument('--dep_servers', action='store', nargs='+',
             help="servers for a dependency model",
             default=('island1:8082', 'island2:8082', 'island3:8082',
@@ -183,6 +264,24 @@ def get_model_name(args):
     """Devise a relatively unique but interpretable name for the saved
     model.
     """
+
+    if args.split_corpus == "yes":
+        return ''.join((
+            ('DEBUG_' if args.debug_idxs is not None else '') + \
+            args.subcorpus + '_',
+            get_corpus_name(args) + '_',
+            args.partition + '-',
+            str(args.dev_percent) + 'dev_',
+            '+'.join(name for name in sorted(args.features)),
+            '-std' if args.standardize else '',
+            '_', '+'.join(name for name in sorted(args.norm)),
+            '_n' + str(args.ngram_order),
+            '' if len(args.vars) == 0 else '+',
+            '+'.join(name[:3] for name in sorted(args.vars)),
+            '' if len(args.constraints) == 0 else '_',
+            '+'.join(name for name in sorted(args.constraints)),
+            ))
+
     return ''.join((
             ('DEBUG_' if args.debug_idxs is not None else '') + \
             get_corpus_name(args) + '_',
@@ -207,6 +306,10 @@ def init_learner(trans_corpus, args):
     transduction.init_servers(args.lm_servers, args.dep_servers)
 
     if args.model_name is not None:
+        if args.split_corpus == "yes":
+            return structperceptron.StructPerceptron(args.subcorpus+'_'+
+                args.model_name,
+                model_path=args.model_path)
         return structperceptron.StructPerceptron(
                 args.model_name,
                 model_path=args.model_path)
@@ -248,19 +351,20 @@ def add_learner_args(parser):
     parser.add_argument('--display_output', action='store_true',
             help="show the output produced during decoding")
 
-
 def train(trans_corpus, args):
     """Train a new fusion model on the pyramid dataset.
     """
-    # Add a dev partition within the training partition
-    num_train = len(trans_corpus.train_instances)
-    train_dev = int((100 - args.dev_percent) * 0.01 * num_train)
-    trans_corpus.set_slices(train=(0, train_dev), dev=(train_dev, num_train))
-
     train_instances = trans_corpus.get_instances(
-            partition=args.partition,
+            partition=args.partition, #train
             debug_idxs=args.debug_idxs,
             skip_idxs=args.skip_idxs)
+
+    # Add a dev partition within the training partition
+    num_train = len(trans_corpus.train_instances)
+    print "number of training instances: ", num_train
+    train_dev = int((100 - args.dev_percent) * 0.01 * num_train)
+    #print "train_dev: ", train_dev
+    trans_corpus.set_slices(train=(0, train_dev), dev=(train_dev, num_train))
 
     learner = init_learner(trans_corpus, args)
     learner.train(
@@ -278,8 +382,22 @@ def train(trans_corpus, args):
                            'singlecore': args.singlecore,
                            'streaming': False,
                            'eval_path': None,
-                           'output_path': None},
+                           'output_path': None,
+                           'subcorpus': args.subcorpus},
             **onlinelearner.filter_args(args))
+
+def train_split(corpus, args):
+    args.subcorpus = "final"
+    train(corpus[0],args) 
+
+    args.subcorpus = "noun"
+    train(corpus[1],args) 
+
+    args.subcorpus = "adj"
+    train(corpus[2],args) 
+
+    args.subcorpus = "adv"
+    train(corpus[3],args) 
 
 ###############################################################################
 
@@ -324,6 +442,94 @@ def test(trans_corpus, args):
             output_path=args.output_path,
             overwritten_params=get_overwritten_params(args),
             **onlinelearner.filter_args(args))
+
+    n1_results = [[],[],[]]
+    n2_results = [[],[],[]]
+    n3_results = [[],[],[]]
+    n4_results = [[],[],[]]
+    content_results = [[],[],[]]
+    for i in trans_corpus.test_instances:
+        n1_results = save_ngram_results(i,1,n1_results)
+        n2_results = save_ngram_results(i,2,n2_results)
+        n3_results = save_ngram_results(i,3,n3_results)
+        n4_results = save_ngram_results(i,4,n4_results)
+        content_results = save_content_results(i,content_results)
+
+    
+    dump_results(n1_results,"n1")
+    dump_results(n2_results,"n2")
+    dump_results(n3_results,"n3")
+    dump_results(n4_results,"n4")
+    dump_results(content_results,"content")
+
+def test_split(corpus, args):
+    # 0 = final, 1 = noun, 2 = adj, 3 = adv
+
+    args.subcorpus = "noun"
+    test(corpus[1],args) 
+
+    args.subcorpus = "adj"
+    test(corpus[2],args) 
+
+    args.subcorpus = "adv"
+    test(corpus[3],args) 
+
+    for count ,i in enumerate(corpus[0].test_instances): # count is index, i is instace
+        noun_sent = transduction.model.lm_proxy.score_sent(corpus[1].test_instances[count].output_sent.tokens)
+        noun_len = len(corpus[1].test_instances[count].output_sent.tokens)
+        adj_sent = transduction.model.lm_proxy.score_sent(corpus[2].test_instances[count].output_sent.tokens)
+        adj_len = len(corpus[2].test_instances[count].output_sent.tokens)
+        adv_sent = transduction.model.lm_proxy.score_sent(corpus[3].test_instances[count].output_sent.tokens)
+        adv_len = len(corpus[3].test_instances[count].output_sent.tokens)
+        
+        scores = [noun_sent/float(noun_len), adj_sent/float(adj_len), adv_sent/float(adv_len)]
+        maxi = scores.index(max(scores))
+        corpus[0].test_instances[count] = copy.deepcopy(corpus[maxi+1].test_instances[count])
+
+
+   # score final empty corpus
+    args.subcorpus = "final"
+    test(corpus[0],args)
+
+    n1_results = [[],[],[]]
+    n2_results = [[],[],[]]
+    n3_results = [[],[],[]]
+    n4_results = [[],[],[]]
+    content_results = [[],[],[]]
+    for i in corpus[0].test_instances:
+        n1_results = save_ngram_results(i,1,n1_results)
+        n2_results = save_ngram_results(i,2,n2_results)
+        n3_results = save_ngram_results(i,3,n3_results)
+        n4_results = save_ngram_results(i,4,n4_results)
+        content_results = save_content_results(i,content_results)
+
+    
+    dump_results(n1_results,"n1")
+    dump_results(n2_results,"n2")
+    dump_results(n3_results,"n3")
+    dump_results(n4_results,"n4")
+    dump_results(content_results,"content")
+    
+
+def save_ngram_results(instance,n,arr):
+    p,r,f= instance.score_ngrams(n=n)
+    arr[0].append(p)
+    arr[1].append(r)
+    arr[2].append(f)
+    return arr
+
+def save_content_results(instance,arr):
+    p,r,f= instance.score_content_words(prefixes=('NN','VB'))
+    print "NN and VB: ",p,r,f
+    arr[0].append(p)
+    arr[1].append(r)
+    arr[2].append(f)
+    return arr
+
+def dump_results(arr,t):
+    np.array(arr[0]).dump(result_dir+data_type+exp_no+"_"+t+"_p.npy")
+    np.array(arr[1]).dump(result_dir+data_type+exp_no+"_"+t+"_r.npy")
+    np.array(arr[2]).dump(result_dir+data_type+exp_no+"_"+t+"_f.npy")
 
 
 def get_overwritten_params(args):
@@ -371,7 +577,7 @@ def baseline(trans_corpus, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A text-to-text system.')
-    parser.add_argument('mode', help='train|test')
+    parser.add_argument('mode', help='train|test|train_split|test_split')
     add_corpus_args(parser)
     add_partition_args(parser)
     add_model_args(parser)
@@ -379,6 +585,9 @@ if __name__ == '__main__':
     add_learner_args(parser)
 
     args = parser.parse_args()
+
+    args.subcorpus = None
+
     if args.mode in locals():
         locals()[args.mode](get_corpus(args), args)
     else:

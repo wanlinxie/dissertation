@@ -47,6 +47,7 @@ class TransductionCorpus(text.Corpus):
         tgt_instances = self.get_instances(partition=partition,
                                            debug_idxs=debug_idxs,
                                            skip_idxs=skip_idxs)
+
         learner.run(tgt_instances, **kwargs)
         return tgt_instances
 
@@ -98,7 +99,17 @@ class GoldTransductionCorpus(TransductionCorpus):
         # When evaluating multiple iterations of the same model over a fixed
         # partition, decoding should ensure that initialization isn't
         # unnecessarily repeated.
-        if learner is not None:
+        #print(kwargs)
+        
+        if partition=='test' and kwargs['subcorpus'] is not None and kwargs['subcorpus'] == 'final':
+            #if kwargs['subcorpus'] == 'final':
+            print("FINAL")
+            eval_instances = self.get_instances(partition=partition,
+                                            debug_idxs=debug_idxs,
+                                            skip_idxs=skip_idxs)
+            system_name = learner.name
+
+        elif learner is not None:
             eval_instances = self.decode_instances(learner,
                                                    partition=partition,
                                                    debug_idxs=debug_idxs,
@@ -114,6 +125,7 @@ class GoldTransductionCorpus(TransductionCorpus):
                                                 debug_idxs=debug_idxs,
                                                 skip_idxs=skip_idxs)
             system_name = 'baseline'
+        
         num_instances = len(eval_instances)
 
         # Record overwritten parameters in the filenames
@@ -181,16 +193,25 @@ class GoldTransductionCorpus(TransductionCorpus):
 
                 # POS tag recall
                 for use_labels in set([False]) | set([has_labels]):
-                    for prefix in ('NN', 'VB', 'JJ', 'RB'):
-                        p, r, f = instance.score_content_words(
-                                use_labels=use_labels, prefixes=(prefix,))
-                        eval_obj.add_metrics(
-                                precision=p,
-                                recall=r,
-                                system=system_name,
-                                corpus=('LBLs ' + prefix) if use_labels \
-                                        else ('GOLD ' + prefix),
-                                )
+                    #for prefix in ('NN', 'VB', 'JJ', 'RB'):
+                    #    p, r, f = instance.score_content_words(
+                    #            use_labels=use_labels, prefixes=(prefix,))
+                    #    eval_obj.add_metrics(
+                    #            precision=p,
+                    #            recall=r,
+                    #            system=system_name,
+                    #            corpus=('LBLs ' + prefix) if use_labels \
+                    #                    else ('GOLD ' + prefix),
+                    #            )
+                    p, r, f = instance.score_content_words(
+                            use_labels=use_labels, prefixes=('NN','VB'))
+                    eval_obj.add_metrics(
+                            precision=p,
+                            recall=r,
+                            system=system_name,
+                            corpus=('LBLs ' + 'NN+VB') if use_labels \
+                                else ('GOLD ' + 'NN+VB'),
+                            )
 
                 try:
                     if lm_proxy is not None:

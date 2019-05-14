@@ -12,7 +12,7 @@ import text.sentence
 class Tagchunk(object):
     """Interface to the TagChunk tool.
     """
-    def __init__(self, path='/home/kapil/research/tools/TagChunk/'):
+    def __init__(self, path='/path/to/project/tools/tagchunk/'):
         """Initialize the path to TagChunk and regular expressions for
         processing its BIO-tagged output format.
         """
@@ -61,23 +61,31 @@ class Tagchunk(object):
                                         temp_filepath,
                                         self.resources_path],
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
+                                        stderr=subprocess.PIPE,
+                                        shell = True)
+
             stdout, stderr = process.communicate()
+            print(stdout)
 
         finally:
             # Delete temporary file
+            #print("Delete temp file")
             os.remove(temp_filepath)
 
         # Split output into strings of BIO-tagged words
         strings_BIO = stdout.split('\n');
+        print("debugging")
+        print(strings_BIO)
         del strings_BIO[-1]
 
         # Process sentence
         for sentence, string_BIO in zip(sentences, strings_BIO):
+            print("debugging 2")
             pos_tags, chunks = self.process_BIO_string(string_BIO)
 
             sentence.add_token_tags(pos_tags, name='pos_tags',
                     annotator='tagchunk')
+            print("!!! added pos tags")
             sentence.add_span_tags(chunks, name='chunks',
                     annotator='tagchunk')
 

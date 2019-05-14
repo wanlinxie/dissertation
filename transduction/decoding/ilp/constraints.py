@@ -14,6 +14,7 @@ class TransductionConstraints(object):
             max_flow=100, **kwargs):
         """Apply structural constraints specific to each variable type.
         """
+        #print("vartypes: ",var_types) # word, gram
         if 'ngram' in var_types:
             cls.ngram_seq(lp,
                     ngram_order=ngram_order,
@@ -338,6 +339,7 @@ class TransductionConstraints(object):
     def redundancy(cls, lp, instance):
         """Ensure that redundant content words don't appear in the output.
         """
+        print "ensure redundancy"
         meta_var = lp.retrieve_variable('META')
         seen_word_idxs = {}
         for word, word_idx_set in instance.support_clusters.iteritems():
@@ -386,6 +388,27 @@ class TransductionConstraints(object):
             # Alternatively, constrain to at most one occurrence
             #lp.add_constraint('META', 'has_exactly', 1, word)
             #lp.add_constraint('META', 'has_at_most', 1, word)
+    
+    @classmethod
+    def limitconj(cls, lp, instance):
+        print "ensure only one conj"
+
+        conj_var = lp.retrieve_variable('SUBCONJ')
+        #print(conj_var.has_link('subconj'))
+        #print(conj_var.constraints)
+        #print(conj_var.linked_idxs)
+        #print(conj_var.raw_linked_idxs)
+        #print(conj_var.linked_type)
+
+        lp.add_constraint('SUBCONJ', 'has_exactly', 1, 'subconj')
+
+         
+        #for word, word_idx_set in instance.support_clusters.iteritems():
+        #    print word, word_idx_set
+        #    if len(word_idx_set) == 0:
+        #        continue
+
+    
 
 ##############################################################################
 # Constraint groups
@@ -496,3 +519,7 @@ class TransductionConstraints(object):
         """Constraints specific to sentence fusion.
         """
         return [('redundancy',)]
+
+    @classmethod
+    def subconj(cls):
+        return [('limitconj',)]

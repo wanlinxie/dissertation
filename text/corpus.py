@@ -7,6 +7,7 @@ import instance as instancemod
 import os.path
 import re
 import sys
+import pickle
 from text import annotations
 from utils import timer
 
@@ -111,6 +112,7 @@ class Corpus(object):
             annotator_names = annotator_names[0]
 
         # Collect sentences for annotation
+        print("collecting sentences for annotation")
         all_sents = [sent for instance in self.instances
                           for sent in instance.get_sentences()]
 
@@ -159,8 +161,11 @@ class Corpus(object):
         sys.stderr.write("Restoring \'" + self.name + "\' corpus from " +
                          self.savepath + "\n")
         with open(self.savepath) as f:
+            print("loading")
             other = cPickle.load(f)
+            print("loaded")
             self.__dict__.update(other.__dict__)
+        print("restored")
         return True
 
     def save(self):

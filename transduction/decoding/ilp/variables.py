@@ -14,7 +14,7 @@ class TransductionVariables(object):
     def add_all(cls, lp, feats, instance, ngram_order=3, **kwargs):
         """Add variables for words and structural indicators.
         """
-        # Add variables for each word in the input
+        cls.add_conjunctions(lp, feats, instance, **kwargs)
         cls.add_words(lp, feats, instance, **kwargs)
 
         # Add structural variables
@@ -368,22 +368,46 @@ class TransductionVariables(object):
 # Variable groups
 
     @classmethod
+    def add_conjunctions(cls, lp, feats, instance, **kwargs):
+        n = len(instance.input_sents)
+
+        conj_var = lp.create_boolean_variable('SUBCONJ')
+
+        for s, sentence in enumerate(instance.input_sents):
+            if s == n-1:
+                #print sentence.raw
+                for w, pos in enumerate(sentence.pos_tags):
+                    #print "w: ", w, "pos: ", pos
+                    word_idx = (n-1, w)
+                    word_var = cls.add_word(lp, feats, instance, word_idx)
+                    conj_var.add_link('subconj',word_var)
+
+
+
+    @classmethod
     def add_words(cls, lp, feats, instance, **kwargs):
         """Add indicator variables which note whether a word is present
         in the solution or not.
         """
         # Create an unused variable to track certain categories of words for
         # manual constraints
+        #print "add_words"
         meta_var = lp.create_boolean_variable('META')
         paren_nesting = 0
         open_parens = set(('(', '[', '{', '<'))
         close_parens = set((')', ']', '}', '>'))
-
+        
+        n = len(instance.input_sents)
         for s, sentence in enumerate(instance.input_sents):
+            if s == n-1:
+                continue
             word_vars = []
             parenthetical_idxs = set()
             for w, pos in enumerate(sentence.pos_tags):
+                #print "w: ", w, "pos: ", pos
                 word_idx = (s, w)
+                #print "word_idx: ", word_idx
+                #print instance
                 word_var = cls.add_word(lp, feats, instance, word_idx)
                 word_vars.append(word_var)
 

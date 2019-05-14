@@ -14,8 +14,7 @@ class Stanford(object):
     """Interface to the Stanford dependency parser.
     """
     def __init__(self,
-            path='/home/kapil/research/tools/stanford-parser-2012-11-12'):
-            #path='/proj/fluke/users/kapil/tools/stanford-parser-2012-11-12'):
+            path='/path/to/project/tools/stanford-parser-2012-11-12'):
         """Initialize the path to the Stanford parser.
         """
         self.path = path
@@ -71,7 +70,7 @@ class Stanford(object):
             model_path = 'edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz'
             process = subprocess.Popen(['java',
                                         '-mx500m',
-                                        '-cp', self.path + '/*:',
+                                        '-cp', self.path + '/*',
                                         classname,
                                         '-outputFormat',
                                         ','.join(output_format),
@@ -90,14 +89,15 @@ class Stanford(object):
                 print stderr
         finally:
             # Delete temporary file
+            #print("Dont delete")
             os.remove(temp_filepath)
 
         # Split output into strings of per-sentence parses
         parse_strings = stdout.split('\n\n');
-        parse_strings.pop()
 
         # Process sentence
         for sentence, parse_string in zip(sentences, parse_strings):
+
             dparse = self.process_parse(sentence, parse_string)
 
             if not sentence.has_annotation('dparse', annotator='stanford'):

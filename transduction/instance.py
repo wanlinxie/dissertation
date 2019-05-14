@@ -9,6 +9,7 @@ import numpy as np
 import psutil
 import text
 import time
+from text import annotations
 from transduction.decoding import dp, ilp
 from transduction.model import metaidx
 
@@ -61,8 +62,49 @@ class TransductionInstance(text.Instance):
         if hasattr(self, 'decoder'):
             return
 
+ 
+        
+        conj = text.Sentence('that what whatever who whom whoever whomever ' \
+            'whose which where ' \
+            'when whenever since until before after while as ' \
+            'because since so ' \
+            'although even whereas though ' \
+            'if unless')
+        
+        noun = text.Sentence('that what whatever who whom whoever whomever')
+        adj = text.Sentence('that who whom whose which where')
+        adv = text.Sentence('when whenever since until before after while as because so although even whereas though if unless')
+
+        annotator_names = ["Porter2", "Stanford", "NLTKTagchunk"]
+
+
+        conjlist = []
+        if kwargs['subcorpus'] is None:
+            conjlist = conj
+        elif kwargs['subcorpus'] == 'noun':
+            conjlist = noun
+        elif kwargs['subcorpus'] == 'adj':
+            conjlist = adj
+        elif kwargs['subcorpus'] == 'adv':
+            conjlist = adv
+        
+
+        #### annotating (from corpus.py)
+        for annotator_name in annotator_names:
+            unannotated_sents = [conjlist]
+            annotator = annotations.load_annotator(annotator_name)
+            batch_size = len(unannotated_sents)
+            idx = 0
+            while idx < len(unannotated_sents):
+                batch_sents = unannotated_sents[idx:idx+batch_size]
+                idx += batch_size
+                annotator.run_on_corpus(batch_sents)
+        
+        self.input_sents.append(conjlist)
+
         # Expand chunk annotations for each sentence
         self.input_chunks = self.expand_chunks(self.input_sents)
+        #print(self.input_chunks)
 
         # Map each input token to identical tokens in the input sentences
         self.input_maps = mapping.TokenMapping.map_all_sents(
